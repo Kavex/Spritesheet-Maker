@@ -6,29 +6,59 @@ Spritesheet Maker is a Python GUI application that allows you to easily create s
 
 Download: https://github.com/Kavex/Spritesheet-Maker/releases/
 
+A versatile GUI tool built with Python and Tkinter that allows you to create spritesheets from individual images, export JSON metadata, slice spritesheets, and edit pixel art with a dedicated editor featuring MS Paint–like functionality.
+
 ## Features
 
+### SpriteSheet Maker
+
 - **Image Management:**  
-  - Add images from your computer  
-  - Remove or clear images  
-  - Reorder images with move up/down controls  
-
-- **Preview & Customization:**  
-  - Real-time preview of the spritesheet  
-  - Adjustable number of columns (default is 4)  
-  - Zoom functionality with a slider  
-  - Scrollable preview canvas  
-  - Option for transparent background or a custom background color (via hex code)
-
+  - Add, remove, clear, and reorder sprite images.
+- **Live Preview:**  
+  - View a real-time preview of your spritesheet with adjustable zoom and column settings.
+  - Set transparent background color
+  - Change Columns on the fly
 - **Export Options:**  
-  - Save the spritesheet as PNG, JPEG, BMP, TGA, TIFF, or WEBP  
-  - Save and load projects (using JSON format)
-  - Export metadata for spritesheet for slicing or other future use  
+  - Export your spritesheet in PNG, JPEG, BMP, TGA, TIFF, and WEBP formats.
+  - Optionally export JSON metadata with each sprite’s original filename, dimensions, and position.
+- **Spritesheet Slicing:**  
+  - Slice an existing spritesheet:
+    - **Automatically** using JSON metadata.
+    - **Manually** by specifying tile width, height, columns, and rows.
 
-- **User Interface:**  
-  - Built using Tkinter and Pillow  
-  - Easy-to-use GUI with menu options for new project, save, load, and export
- 
-- **Slicing:**
-  - Option to slice an existing spritesheet.
-  - Can use the spritesheet metadata for automatic slicing
+### Simple Sprite Editor
+
+- **Grid-Based Canvas:**  
+  - Customizable grid for pixel art creation.
+  - Choose between a checkered (transparent) or solid white background.
+- **Toolset:**  
+  - **Pen:** Draw pixels.
+  - **Eraser:** Remove pixels.
+  - **Fill Bucket:** Flood-fill contiguous areas.
+  - **Eyedropper:** Pick and display the color of a pixel (shows hex code on hover).
+- **Color Management:**  
+  - Pick colors with a color chooser.
+  - View and select from the last 10 colors used.
+- **File Operations:**  
+  - Open, save, and clear pixel art images in multiple file formats.
+
+## Installation
+
+### Prerequisites
+
+- **Python 3.x**
+- **Pillow** – Python Imaging Library
+
+Install dependencies using pip:
+
+```bash
+pip install pillow
+```
+
+Running the Application:
+
+```bash
+python SpriteSheetMaker.py
+```
+
+
