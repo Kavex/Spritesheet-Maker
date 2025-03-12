@@ -24,19 +24,23 @@ class SpriteSheetMaker:
         self.transparent_bg = tk.BooleanVar(value=True)
         self.bg_color = "#ffffff"  # Default background color (if transparency is disabled)
         
+        # New: Option to export JSON metadata along with the spritesheet.
+        self.export_json_metadata = tk.BooleanVar(value=False)
+        
         self.build_menu()
         self.setup_widgets()
     
     def build_menu(self):
         menu_bar = Menu(self.master)
         
-        # File Menu: New, Save, Load, Export, Exit
+        # File Menu: New, Save, Load, Export, Slice, Exit
         file_menu = Menu(menu_bar, tearoff=0)
         file_menu.add_command(label="New Project", command=self.new_project)
         file_menu.add_command(label="Save Project", command=self.save_project)
         file_menu.add_command(label="Load Project", command=self.load_project)
         file_menu.add_separator()
         file_menu.add_command(label="Export Spritesheet", command=self.export_spritesheet)
+        file_menu.add_command(label="Slice Spritesheet", command=self.open_slice_window)
         file_menu.add_separator()
         file_menu.add_command(label="Exit", command=self.master.quit)
         menu_bar.add_cascade(label="File", menu=file_menu)
@@ -78,7 +82,7 @@ class SpriteSheetMaker:
         tk.Button(order_frame, text="Move Up", command=self.move_up).pack(side=tk.LEFT, fill=tk.X, expand=True)
         tk.Button(order_frame, text="Move Down", command=self.move_down).pack(side=tk.LEFT, fill=tk.X, expand=True)
         
-        # Top-right controls: Columns, Refresh, Size display, Zoom slider, and Background options.
+        # Top-right controls: Columns, Refresh, Size display, Zoom slider, Background options, and JSON export.
         top_right = tk.Frame(self.right_frame)
         top_right.pack(fill=tk.X, padx=5, pady=5)
         tk.Label(top_right, text="Columns:").pack(side=tk.LEFT)
@@ -105,6 +109,10 @@ class SpriteSheetMaker:
         self.bg_color_button.pack(side=tk.LEFT, padx=5)
         self.bg_color_label = tk.Label(top_right, text=self.bg_color)
         self.bg_color_label.pack(side=tk.LEFT, padx=5)
+        
+        # New: Checkbox for JSON metadata export.
+        self.json_export_cb = tk.Checkbutton(top_right, text="Export JSON Metadata", variable=self.export_json_metadata)
+        self.json_export_cb.pack(side=tk.LEFT, padx=5)
         
         # Create a frame for the preview canvas and its scrollbars.
         self.preview_frame = tk.Frame(self.right_frame)
@@ -232,20 +240,35 @@ class SpriteSheetMaker:
             b = int(self.bg_color[5:7], 16)
             bg = (r, g, b, 255)
         
+        self.cell_width = cell_width  # Save for JSON metadata and slicing use.
+        self.cell_height = cell_height
+        
         spritesheet = Image.new("RGBA", (sheet_width, sheet_height), bg)
+        self.metadata = []  # For JSON metadata export.
         for idx, img in enumerate(images):
             row = idx // cols
             col = idx % cols
-            spritesheet.paste(img, (col * cell_width, row * cell_height), img)
+            x = col * cell_width
+            y = row * cell_height
+            spritesheet.paste(img, (x, y), img)
+            self.metadata.append({
+                "filename": os.path.basename(self.image_list[idx]),
+                "order": idx,
+                "width": img.width,
+                "height": img.height,
+                "x": x,
+                "y": y
+            })
         
         zoomed_width = int(sheet_width * self.zoom_factor)
         zoomed_height = int(sheet_height * self.zoom_factor)
-        spritesheet = spritesheet.resize((zoomed_width, zoomed_height), RESAMPLE_FILTER)
+        spritesheet_zoomed = spritesheet.resize((zoomed_width, zoomed_height), RESAMPLE_FILTER)
         
-        self.preview_image = ImageTk.PhotoImage(spritesheet)
+        self.preview_image = ImageTk.PhotoImage(spritesheet_zoomed)
         self.preview_canvas.delete("all")
         self.preview_canvas.create_image(0, 0, anchor="nw", image=self.preview_image)
         self.preview_canvas.config(scrollregion=(0, 0, zoomed_width, zoomed_height))
+        self.spritesheet_image = spritesheet  # Save original resolution image for export.
     
     def export_spritesheet(self):
         if not self.image_list:
@@ -257,6 +280,7 @@ class SpriteSheetMaker:
         except ValueError:
             cols = 1
         
+        # Re-create the spritesheet (similar to update_preview) for export.
         images = []
         for path in self.image_list:
             try:
@@ -284,10 +308,21 @@ class SpriteSheetMaker:
             bg = (r, g, b, 255)
         
         spritesheet = Image.new("RGBA", (sheet_width, sheet_height), bg)
+        metadata = []  # Collect metadata for JSON export.
         for idx, img in enumerate(images):
             row = idx // cols
             col = idx % cols
-            spritesheet.paste(img, (col * cell_width, row * cell_height), img)
+            x = col * cell_width
+            y = row * cell_height
+            spritesheet.paste(img, (x, y), img)
+            metadata.append({
+                "filename": os.path.basename(self.image_list[idx]),
+                "order": idx,
+                "width": img.width,
+                "height": img.height,
+                "x": x,
+                "y": y
+            })
         
         file_path = filedialog.asksaveasfilename(
             defaultextension=".png",
@@ -317,6 +352,19 @@ class SpriteSheetMaker:
             try:
                 spritesheet.save(file_path, file_format)
                 messagebox.showinfo("Success", f"Spritesheet saved to {file_path}")
+                # If JSON metadata export is enabled, also save the metadata.
+                if self.export_json_metadata.get():
+                    metadata_dict = {
+                        "spritesheet_width": sheet_width,
+                        "spritesheet_height": sheet_height,
+                        "cell_width": cell_width,
+                        "cell_height": cell_height,
+                        "sprites": metadata
+                    }
+                    json_path = os.path.splitext(file_path)[0] + ".json"
+                    with open(json_path, 'w') as f:
+                        json.dump(metadata_dict, f, indent=4)
+                    messagebox.showinfo("Success", f"JSON metadata saved to {json_path}")
             except Exception as e:
                 messagebox.showerror("Error", f"Failed to save spritesheet: {e}")
     
@@ -353,7 +401,154 @@ class SpriteSheetMaker:
         about_text = "SpriteSheet Maker\nMade by Kavex\nGitHub: https://github.com/Kavex/Spritesheet-Maker"
         if messagebox.showinfo("About", about_text):
             webbrowser.open("https://github.com/Kavex/Spritesheet-Maker")
-
+    
+    # New: Window for slicing an existing spritesheet.
+    def open_slice_window(self):
+        self.slice_window = tk.Toplevel(self.master)
+        self.slice_window.title("Slice Spritesheet")
+        
+        # Variables for slicing window.
+        self.slice_image_path = tk.StringVar()
+        self.slice_json_path = tk.StringVar()
+        self.use_json_metadata = tk.BooleanVar(value=False)
+        self.manual_tile_width = tk.StringVar()
+        self.manual_tile_height = tk.StringVar()
+        self.manual_columns = tk.StringVar()
+        self.manual_rows = tk.StringVar()
+        
+        # Spritesheet selection.
+        frame1 = tk.Frame(self.slice_window)
+        frame1.pack(fill=tk.X, padx=5, pady=5)
+        tk.Label(frame1, text="Select Spritesheet:").pack(side=tk.LEFT)
+        tk.Button(frame1, text="Browse", command=self.select_slice_image).pack(side=tk.LEFT, padx=5)
+        tk.Label(frame1, textvariable=self.slice_image_path).pack(side=tk.LEFT)
+        
+        # Checkbox for JSON metadata.
+        frame2 = tk.Frame(self.slice_window)
+        frame2.pack(fill=tk.X, padx=5, pady=5)
+        self.json_checkbox = tk.Checkbutton(frame2, text="Use JSON metadata", variable=self.use_json_metadata, command=self.toggle_slice_options)
+        self.json_checkbox.pack(side=tk.LEFT)
+        
+        # JSON file selection (only active when checkbox is checked).
+        self.json_frame = tk.Frame(self.slice_window)
+        self.json_frame.pack(fill=tk.X, padx=5, pady=5)
+        tk.Label(self.json_frame, text="Select JSON file:").pack(side=tk.LEFT)
+        tk.Button(self.json_frame, text="Browse", command=self.select_slice_json).pack(side=tk.LEFT, padx=5)
+        tk.Label(self.json_frame, textvariable=self.slice_json_path).pack(side=tk.LEFT)
+        
+        # Manual slicing options (shown when JSON is not used).
+        self.manual_frame = tk.Frame(self.slice_window)
+        self.manual_frame.pack(fill=tk.X, padx=5, pady=5)
+        tk.Label(self.manual_frame, text="Tile Width:").grid(row=0, column=0, sticky="e")
+        tk.Entry(self.manual_frame, textvariable=self.manual_tile_width, width=5).grid(row=0, column=1, padx=5)
+        tk.Label(self.manual_frame, text="Tile Height:").grid(row=0, column=2, sticky="e")
+        tk.Entry(self.manual_frame, textvariable=self.manual_tile_height, width=5).grid(row=0, column=3, padx=5)
+        tk.Label(self.manual_frame, text="Columns:").grid(row=1, column=0, sticky="e")
+        tk.Entry(self.manual_frame, textvariable=self.manual_columns, width=5).grid(row=1, column=1, padx=5)
+        tk.Label(self.manual_frame, text="Rows:").grid(row=1, column=2, sticky="e")
+        tk.Entry(self.manual_frame, textvariable=self.manual_rows, width=5).grid(row=1, column=3, padx=5)
+        
+        # Initially, disable manual options if JSON is checked.
+        self.toggle_slice_options()
+        
+        # Slice button.
+        slice_btn = tk.Button(self.slice_window, text="Slice", command=self.slice_spritesheet_action)
+        slice_btn.pack(pady=10)
+    
+    def toggle_slice_options(self):
+        if self.use_json_metadata.get():
+            # Enable JSON frame and disable manual frame.
+            for child in self.json_frame.winfo_children():
+                child.configure(state=tk.NORMAL)
+            for child in self.manual_frame.winfo_children():
+                child.configure(state=tk.DISABLED)
+        else:
+            for child in self.json_frame.winfo_children():
+                child.configure(state=tk.DISABLED)
+            for child in self.manual_frame.winfo_children():
+                child.configure(state=tk.NORMAL)
+    
+    def select_slice_image(self):
+        path = filedialog.askopenfilename(title="Select Spritesheet Image",
+                                          filetypes=[("Image Files", "*.png;*.jpg;*.jpeg;*.gif")])
+        if path:
+            self.slice_image_path.set(path)
+    
+    def select_slice_json(self):
+        path = filedialog.askopenfilename(title="Select JSON Metadata File",
+                                          filetypes=[("JSON files", "*.json")])
+        if path:
+            self.slice_json_path.set(path)
+    
+    def slice_spritesheet_action(self):
+        # Ask for output directory.
+        output_dir = filedialog.askdirectory(title="Select Output Directory")
+        if not output_dir:
+            messagebox.showwarning("Warning", "No output directory selected")
+            return
+        
+        if not self.slice_image_path.get():
+            messagebox.showwarning("Warning", "No spritesheet image selected")
+            return
+        
+        try:
+            spritesheet = Image.open(self.slice_image_path.get()).convert("RGBA")
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to open spritesheet image: {e}")
+            return
+        
+        if self.use_json_metadata.get():
+            # Use JSON metadata to slice.
+            if not self.slice_json_path.get():
+                messagebox.showwarning("Warning", "No JSON metadata file selected")
+                return
+            try:
+                with open(self.slice_json_path.get(), 'r') as f:
+                    data = json.load(f)
+            except Exception as e:
+                messagebox.showerror("Error", f"Failed to load JSON metadata: {e}")
+                return
+            
+            sprites = data.get("sprites", [])
+            if not sprites:
+                messagebox.showwarning("Warning", "JSON metadata does not contain sprite data")
+                return
+            
+            for sprite in sprites:
+                x = sprite.get("x", 0)
+                y = sprite.get("y", 0)
+                width = sprite.get("width", 0)
+                height = sprite.get("height", 0)
+                filename = sprite.get("filename", "sprite.png")
+                crop_box = (x, y, x + width, y + height)
+                slice_img = spritesheet.crop(crop_box)
+                out_path = os.path.join(output_dir, filename)
+                slice_img.save(out_path)
+            messagebox.showinfo("Success", f"Slicing completed. {len(sprites)} sprites saved.")
+        else:
+            # Manual slicing: get tile dimensions and grid layout.
+            try:
+                tile_width = int(self.manual_tile_width.get())
+                tile_height = int(self.manual_tile_height.get())
+                cols = int(self.manual_columns.get())
+                rows = int(self.manual_rows.get())
+            except Exception as e:
+                messagebox.showerror("Error", "Please enter valid numbers for tile dimensions, columns, and rows.")
+                return
+            
+            count = 0
+            for r in range(rows):
+                for c in range(cols):
+                    x = c * tile_width
+                    y = r * tile_height
+                    crop_box = (x, y, x + tile_width, y + tile_height)
+                    slice_img = spritesheet.crop(crop_box)
+                    out_filename = f"tile_r{r}_c{c}.png"
+                    out_path = os.path.join(output_dir, out_filename)
+                    slice_img.save(out_path)
+                    count += 1
+            messagebox.showinfo("Success", f"Slicing completed. {count} tiles saved.")
+    
 if __name__ == "__main__":
     root = tk.Tk()
     root.geometry("1200x800")  # Double the default window size.
