@@ -22,18 +22,13 @@ Download: https://github.com/Kavex/Spritesheet-Maker/releases/
 
 - **Export Options:**  
   - Save the spritesheet as PNG, JPEG, BMP, TGA, TIFF, or WEBP  
-  - Save and load projects (using JSON format)  
+  - Save and load projects (using JSON format)
+  - Export metadata for spritesheet for slicing or other future use  
 
 - **User Interface:**  
   - Built using Tkinter and Pillow  
-  - Easy-to-use GUI with menu options for new project, save, load, and export  
-
-## Installation
-
-1. **Clone the repository:**
-
-   ```bash
-   git clone https://github.com/Kavex/Spritesheet-Maker.git
-   cd Spritesheet-Maker
-
-   
+  - Easy-to-use GUI with menu options for new project, save, load, and export
+ 
+- **Slicing:**
+  - Option to slice an existing spritesheet.
+  - Can use the spritesheet metadata for automatic slicing
