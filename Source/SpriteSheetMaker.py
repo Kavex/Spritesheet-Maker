@@ -12,6 +12,9 @@ if hasattr(Image, "Resampling"):
 else:
     RESAMPLE_FILTER = Image.LANCZOS  # For older Pillow versions
 
+#########################
+# Main SpriteSheet Maker
+#########################
 class SpriteSheetMaker:
     def __init__(self, master):
         self.master = master
@@ -24,7 +27,7 @@ class SpriteSheetMaker:
         self.transparent_bg = tk.BooleanVar(value=True)
         self.bg_color = "#ffffff"  # Default background color (if transparency is disabled)
         
-        # New: Option to export JSON metadata along with the spritesheet.
+        # Option to export JSON metadata along with the spritesheet.
         self.export_json_metadata = tk.BooleanVar(value=False)
         
         self.build_menu()
@@ -33,7 +36,7 @@ class SpriteSheetMaker:
     def build_menu(self):
         menu_bar = Menu(self.master)
         
-        # File Menu: New, Save, Load, Export, Slice, Exit
+        # File Menu: New, Save, Load, Export, Slice, Pixel Art Editor, Exit
         file_menu = Menu(menu_bar, tearoff=0)
         file_menu.add_command(label="New Project", command=self.new_project)
         file_menu.add_command(label="Save Project", command=self.save_project)
@@ -41,6 +44,8 @@ class SpriteSheetMaker:
         file_menu.add_separator()
         file_menu.add_command(label="Export Spritesheet", command=self.export_spritesheet)
         file_menu.add_command(label="Slice Spritesheet", command=self.open_slice_window)
+        file_menu.add_separator()
+        file_menu.add_command(label="Pixel Art Editor", command=self.open_pixel_art_editor)
         file_menu.add_separator()
         file_menu.add_command(label="Exit", command=self.master.quit)
         menu_bar.add_cascade(label="File", menu=file_menu)
@@ -110,7 +115,7 @@ class SpriteSheetMaker:
         self.bg_color_label = tk.Label(top_right, text=self.bg_color)
         self.bg_color_label.pack(side=tk.LEFT, padx=5)
         
-        # New: Checkbox for JSON metadata export.
+        # Checkbox for JSON metadata export.
         self.json_export_cb = tk.Checkbutton(top_right, text="Export JSON Metadata", variable=self.export_json_metadata)
         self.json_export_cb.pack(side=tk.LEFT, padx=5)
         
@@ -132,7 +137,6 @@ class SpriteSheetMaker:
         self.preview_canvas.config(yscrollcommand=self.v_scroll.set, xscrollcommand=self.h_scroll.set)
     
     def toggle_bg_controls(self):
-        # Enable or disable the background color picker based on transparency setting.
         if self.transparent_bg.get():
             self.bg_color_button.config(state=tk.DISABLED)
         else:
@@ -231,7 +235,6 @@ class SpriteSheetMaker:
         
         self.size_label.config(text=f"Size: {sheet_width} x {sheet_height}")
         
-        # Use transparent background if enabled; otherwise, use chosen background color.
         if self.transparent_bg.get():
             bg = (0, 0, 0, 0)
         else:
@@ -240,11 +243,11 @@ class SpriteSheetMaker:
             b = int(self.bg_color[5:7], 16)
             bg = (r, g, b, 255)
         
-        self.cell_width = cell_width  # Save for JSON metadata and slicing use.
+        self.cell_width = cell_width
         self.cell_height = cell_height
         
         spritesheet = Image.new("RGBA", (sheet_width, sheet_height), bg)
-        self.metadata = []  # For JSON metadata export.
+        self.metadata = []
         for idx, img in enumerate(images):
             row = idx // cols
             col = idx % cols
@@ -268,7 +271,7 @@ class SpriteSheetMaker:
         self.preview_canvas.delete("all")
         self.preview_canvas.create_image(0, 0, anchor="nw", image=self.preview_image)
         self.preview_canvas.config(scrollregion=(0, 0, zoomed_width, zoomed_height))
-        self.spritesheet_image = spritesheet  # Save original resolution image for export.
+        self.spritesheet_image = spritesheet
     
     def export_spritesheet(self):
         if not self.image_list:
@@ -280,7 +283,6 @@ class SpriteSheetMaker:
         except ValueError:
             cols = 1
         
-        # Re-create the spritesheet (similar to update_preview) for export.
         images = []
         for path in self.image_list:
             try:
@@ -308,7 +310,7 @@ class SpriteSheetMaker:
             bg = (r, g, b, 255)
         
         spritesheet = Image.new("RGBA", (sheet_width, sheet_height), bg)
-        metadata = []  # Collect metadata for JSON export.
+        metadata = []
         for idx, img in enumerate(images):
             row = idx // cols
             col = idx % cols
@@ -352,7 +354,6 @@ class SpriteSheetMaker:
             try:
                 spritesheet.save(file_path, file_format)
                 messagebox.showinfo("Success", f"Spritesheet saved to {file_path}")
-                # If JSON metadata export is enabled, also save the metadata.
                 if self.export_json_metadata.get():
                     metadata_dict = {
                         "spritesheet_width": sheet_width,
@@ -402,12 +403,10 @@ class SpriteSheetMaker:
         if messagebox.showinfo("About", about_text):
             webbrowser.open("https://github.com/Kavex/Spritesheet-Maker")
     
-    # New: Window for slicing an existing spritesheet.
     def open_slice_window(self):
         self.slice_window = tk.Toplevel(self.master)
         self.slice_window.title("Slice Spritesheet")
         
-        # Variables for slicing window.
         self.slice_image_path = tk.StringVar()
         self.slice_json_path = tk.StringVar()
         self.use_json_metadata = tk.BooleanVar(value=False)
@@ -416,27 +415,23 @@ class SpriteSheetMaker:
         self.manual_columns = tk.StringVar()
         self.manual_rows = tk.StringVar()
         
-        # Spritesheet selection.
         frame1 = tk.Frame(self.slice_window)
         frame1.pack(fill=tk.X, padx=5, pady=5)
         tk.Label(frame1, text="Select Spritesheet:").pack(side=tk.LEFT)
         tk.Button(frame1, text="Browse", command=self.select_slice_image).pack(side=tk.LEFT, padx=5)
         tk.Label(frame1, textvariable=self.slice_image_path).pack(side=tk.LEFT)
         
-        # Checkbox for JSON metadata.
         frame2 = tk.Frame(self.slice_window)
         frame2.pack(fill=tk.X, padx=5, pady=5)
         self.json_checkbox = tk.Checkbutton(frame2, text="Use JSON metadata", variable=self.use_json_metadata, command=self.toggle_slice_options)
         self.json_checkbox.pack(side=tk.LEFT)
         
-        # JSON file selection (only active when checkbox is checked).
         self.json_frame = tk.Frame(self.slice_window)
         self.json_frame.pack(fill=tk.X, padx=5, pady=5)
         tk.Label(self.json_frame, text="Select JSON file:").pack(side=tk.LEFT)
         tk.Button(self.json_frame, text="Browse", command=self.select_slice_json).pack(side=tk.LEFT, padx=5)
         tk.Label(self.json_frame, textvariable=self.slice_json_path).pack(side=tk.LEFT)
         
-        # Manual slicing options (shown when JSON is not used).
         self.manual_frame = tk.Frame(self.slice_window)
         self.manual_frame.pack(fill=tk.X, padx=5, pady=5)
         tk.Label(self.manual_frame, text="Tile Width:").grid(row=0, column=0, sticky="e")
@@ -448,16 +443,13 @@ class SpriteSheetMaker:
         tk.Label(self.manual_frame, text="Rows:").grid(row=1, column=2, sticky="e")
         tk.Entry(self.manual_frame, textvariable=self.manual_rows, width=5).grid(row=1, column=3, padx=5)
         
-        # Initially, disable manual options if JSON is checked.
         self.toggle_slice_options()
         
-        # Slice button.
         slice_btn = tk.Button(self.slice_window, text="Slice", command=self.slice_spritesheet_action)
         slice_btn.pack(pady=10)
     
     def toggle_slice_options(self):
         if self.use_json_metadata.get():
-            # Enable JSON frame and disable manual frame.
             for child in self.json_frame.winfo_children():
                 child.configure(state=tk.NORMAL)
             for child in self.manual_frame.winfo_children():
@@ -481,7 +473,6 @@ class SpriteSheetMaker:
             self.slice_json_path.set(path)
     
     def slice_spritesheet_action(self):
-        # Ask for output directory.
         output_dir = filedialog.askdirectory(title="Select Output Directory")
         if not output_dir:
             messagebox.showwarning("Warning", "No output directory selected")
@@ -498,7 +489,6 @@ class SpriteSheetMaker:
             return
         
         if self.use_json_metadata.get():
-            # Use JSON metadata to slice.
             if not self.slice_json_path.get():
                 messagebox.showwarning("Warning", "No JSON metadata file selected")
                 return
@@ -526,7 +516,6 @@ class SpriteSheetMaker:
                 slice_img.save(out_path)
             messagebox.showinfo("Success", f"Slicing completed. {len(sprites)} sprites saved.")
         else:
-            # Manual slicing: get tile dimensions and grid layout.
             try:
                 tile_width = int(self.manual_tile_width.get())
                 tile_height = int(self.manual_tile_height.get())
@@ -549,9 +538,290 @@ class SpriteSheetMaker:
                     count += 1
             messagebox.showinfo("Success", f"Slicing completed. {count} tiles saved.")
     
+    def open_pixel_art_editor(self):
+        PixelArtEditor(self.master)
+
+##################################
+# Pixel Art Editor with Sidebar
+##################################
+class PixelArtEditor:
+    def __init__(self, master):
+        self.window = tk.Toplevel(master)
+        self.window.title("Pixel Art Editor")
+        # Default grid settings.
+        self.grid_width = 32
+        self.grid_height = 32
+        self.cell_size = 16
+        self.current_color = "#000000"  # default drawing color
+        self.show_grid = tk.BooleanVar(value=True)
+        self.transparent_bg = tk.BooleanVar(value=True)
+        self.current_tool = "pen"  # Options: pen, eraser, fill, eyedropper
+        self.color_history = []  # Last 10 colors used
+        
+        # 2D lists for pixel data and canvas cell rectangles.
+        self.pixel_data = [[None for _ in range(self.grid_width)] for _ in range(self.grid_height)]
+        self.cell_rectangles = [[None for _ in range(self.grid_width)] for _ in range(self.grid_height)]
+        
+        self.create_widgets()
+        self.draw_grid()
+    
+    def create_widgets(self):
+        # Top toolbar.
+        toolbar = tk.Frame(self.window)
+        toolbar.pack(side=tk.TOP, fill=tk.X)
+        tk.Button(toolbar, text="New", command=self.new_canvas).pack(side=tk.LEFT, padx=2)
+        tk.Button(toolbar, text="Open", command=self.open_image).pack(side=tk.LEFT, padx=2)
+        tk.Button(toolbar, text="Save", command=self.save_image).pack(side=tk.LEFT, padx=2)
+        tk.Button(toolbar, text="Clear", command=self.clear_canvas).pack(side=tk.LEFT, padx=2)
+        tk.Button(toolbar, text="Choose Color", command=self.choose_color).pack(side=tk.LEFT, padx=2)
+        tk.Checkbutton(toolbar, text="Show Grid", variable=self.show_grid, command=self.redraw_grid).pack(side=tk.LEFT, padx=2)
+        tk.Checkbutton(toolbar, text="Transparent BG", variable=self.transparent_bg, command=self.draw_grid).pack(side=tk.LEFT, padx=2)
+        
+        # Main frame holds the canvas and the sidebar.
+        main_frame = tk.Frame(self.window)
+        main_frame.pack(fill=tk.BOTH, expand=True)
+        
+        canvas_width = self.grid_width * self.cell_size
+        canvas_height = self.grid_height * self.cell_size
+        self.canvas = tk.Canvas(main_frame, width=canvas_width, height=canvas_height, bg="white")
+        self.canvas.pack(side=tk.LEFT)
+        self.canvas.bind("<Button-1>", self.on_canvas_click)
+        self.canvas.bind("<B1-Motion>", self.on_canvas_click)
+        self.canvas.bind("<Motion>", self.on_canvas_motion)
+        
+        # Sidebar with tool buttons and color history.
+        self.sidebar = tk.Frame(main_frame, padx=5, pady=5, bg="#e0e0e0", relief=tk.RAISED, borderwidth=2)
+        self.sidebar.pack(side=tk.RIGHT, fill=tk.Y)
+        tk.Label(self.sidebar, text="Tools:", bg="#e0e0e0").pack(pady=5)
+        tk.Button(self.sidebar, text="Pen", command=lambda: self.set_tool("pen")).pack(fill=tk.X, pady=2)
+        tk.Button(self.sidebar, text="Eraser", command=lambda: self.set_tool("eraser")).pack(fill=tk.X, pady=2)
+        tk.Button(self.sidebar, text="Fill Bucket", command=lambda: self.set_tool("fill")).pack(fill=tk.X, pady=2)
+        tk.Button(self.sidebar, text="Eyedropper", command=lambda: self.set_tool("eyedropper")).pack(fill=tk.X, pady=2)
+        
+        tk.Label(self.sidebar, text="Last Colors:", bg="#e0e0e0").pack(pady=5)
+        self.color_history_frame = tk.Frame(self.sidebar, bg="#e0e0e0")
+        self.color_history_frame.pack(pady=5)
+        
+        self.eyedropper_label = tk.Label(self.sidebar, text="Hovered: None", bg="#e0e0e0")
+        self.eyedropper_label.pack(pady=5)
+        
+        tk.Label(self.sidebar, text="Current Color:", bg="#e0e0e0").pack(pady=5)
+        self.current_color_display = tk.Label(self.sidebar, bg=self.current_color, width=10, height=2)
+        self.current_color_display.pack(pady=5)
+    
+    def set_tool(self, tool):
+        self.current_tool = tool
+    
+    def update_color_history(self, color):
+        if color in self.color_history:
+            self.color_history.remove(color)
+        self.color_history.insert(0, color)
+        if len(self.color_history) > 10:
+            self.color_history = self.color_history[:10]
+        self.refresh_color_history()
+    
+    def refresh_color_history(self):
+        for widget in self.color_history_frame.winfo_children():
+            widget.destroy()
+        for col in self.color_history:
+            btn = tk.Button(self.color_history_frame, bg=col, width=2, command=lambda c=col: self.use_color(c))
+            btn.pack(side=tk.LEFT, padx=1)
+    
+    def use_color(self, color):
+        self.current_color = color
+        self.current_color_display.config(bg=color)
+    
+    def choose_color(self):
+        color = colorchooser.askcolor(title="Choose Color", initialcolor=self.current_color)
+        if color and color[1]:
+            self.current_color = color[1]
+            self.current_color_display.config(bg=self.current_color)
+            self.update_color_history(self.current_color)
+    
+    def draw_grid(self):
+        self.canvas.delete("all")
+        self.cell_rectangles = [[None for _ in range(self.grid_width)] for _ in range(self.grid_height)]
+        for row in range(self.grid_height):
+            for col in range(self.grid_width):
+                x1 = col * self.cell_size
+                y1 = row * self.cell_size
+                x2 = x1 + self.cell_size
+                y2 = y1 + self.cell_size
+                if self.pixel_data[row][col] is not None:
+                    fill_color = self.pixel_data[row][col]
+                else:
+                    if self.transparent_bg.get():
+                        fill_color = "#cccccc" if (row + col) % 2 == 0 else "#ffffff"
+                    else:
+                        fill_color = "#ffffff"
+                rect = self.canvas.create_rectangle(x1, y1, x2, y2,
+                                                    fill=fill_color,
+                                                    outline="gray" if self.show_grid.get() else "")
+                self.cell_rectangles[row][col] = rect
+    
+    def update_cell(self, row, col):
+        if self.pixel_data[row][col] is not None:
+            fill_color = self.pixel_data[row][col]
+        else:
+            if self.transparent_bg.get():
+                fill_color = "#cccccc" if (row + col) % 2 == 0 else "#ffffff"
+            else:
+                fill_color = "#ffffff"
+        rect = self.cell_rectangles[row][col]
+        self.canvas.itemconfig(rect, fill=fill_color)
+    
+    def redraw_grid(self):
+        for row in range(self.grid_height):
+            for col in range(self.grid_width):
+                self.canvas.itemconfig(self.cell_rectangles[row][col],
+                                       outline="gray" if self.show_grid.get() else "")
+    
+    def on_canvas_click(self, event):
+        col = event.x // self.cell_size
+        row = event.y // self.cell_size
+        if not (0 <= col < self.grid_width and 0 <= row < self.grid_height):
+            return
+        if self.current_tool == "pen":
+            self.pixel_data[row][col] = self.current_color
+            self.update_cell(row, col)
+        elif self.current_tool == "eraser":
+            self.pixel_data[row][col] = None
+            self.update_cell(row, col)
+        elif self.current_tool == "fill":
+            self.flood_fill(row, col, self.current_color)
+            self.draw_grid()
+        elif self.current_tool == "eyedropper":
+            picked = self.pixel_data[row][col]
+            if picked is not None:
+                self.current_color = picked
+                self.current_color_display.config(bg=picked)
+                self.update_color_history(picked)
+                self.eyedropper_label.config(text=f"Eyedropper: {picked}")
+    
+    def on_canvas_motion(self, event):
+        if self.current_tool == "eyedropper":
+            col = event.x // self.cell_size
+            row = event.y // self.cell_size
+            if 0 <= row < self.grid_height and 0 <= col < self.grid_width:
+                color = self.pixel_data[row][col]
+                if color is not None:
+                    self.eyedropper_label.config(text=f"Hovered: {color}")
+                else:
+                    self.eyedropper_label.config(text="Hovered: None")
+    
+    def flood_fill(self, row, col, new_color):
+        original_color = self.pixel_data[row][col]
+        if original_color == new_color:
+            return
+        stack = [(row, col)]
+        while stack:
+            r, c = stack.pop()
+            if r < 0 or r >= self.grid_height or c < 0 or c >= self.grid_width:
+                continue
+            if self.pixel_data[r][c] != original_color:
+                continue
+            self.pixel_data[r][c] = new_color
+            stack.extend([(r-1, c), (r+1, c), (r, c-1), (r, c+1)])
+    
+    def clear_canvas(self):
+        self.pixel_data = [[None for _ in range(self.grid_width)] for _ in range(self.grid_height)]
+        self.draw_grid()
+    
+    def new_canvas(self):
+        new_win = tk.Toplevel(self.window)
+        new_win.title("New Canvas")
+        tk.Label(new_win, text="Grid Width:").grid(row=0, column=0)
+        tk.Label(new_win, text="Grid Height:").grid(row=1, column=0)
+        tk.Label(new_win, text="Cell Size:").grid(row=2, column=0)
+        width_var = tk.StringVar(value=str(self.grid_width))
+        height_var = tk.StringVar(value=str(self.grid_height))
+        cell_size_var = tk.StringVar(value=str(self.cell_size))
+        tk.Entry(new_win, textvariable=width_var, width=5).grid(row=0, column=1)
+        tk.Entry(new_win, textvariable=height_var, width=5).grid(row=1, column=1)
+        tk.Entry(new_win, textvariable=cell_size_var, width=5).grid(row=2, column=1)
+        def create_new():
+            try:
+                w = int(width_var.get())
+                h = int(height_var.get())
+                cs = int(cell_size_var.get())
+                self.grid_width = w
+                self.grid_height = h
+                self.cell_size = cs
+                self.pixel_data = [[None for _ in range(self.grid_width)] for _ in range(self.grid_height)]
+                self.canvas.config(width=self.grid_width * self.cell_size, height=self.grid_height * self.cell_size)
+                self.draw_grid()
+                new_win.destroy()
+            except Exception as e:
+                messagebox.showerror("Error", "Invalid input for dimensions.")
+        tk.Button(new_win, text="Create", command=create_new).grid(row=3, column=0, columnspan=2)
+    
+    def open_image(self):
+        path = filedialog.askopenfilename(title="Open Image",
+                                          filetypes=[("Image Files", "*.png;*.jpg;*.jpeg;*.gif")])
+        if path:
+            try:
+                img = Image.open(path).convert("RGBA")
+                w, h = img.size
+                self.grid_width = w
+                self.grid_height = h
+                self.pixel_data = [[None for _ in range(self.grid_width)] for _ in range(self.grid_height)]
+                self.canvas.config(width=self.grid_width * self.cell_size, height=self.grid_height * self.cell_size)
+                for y in range(h):
+                    for x in range(w):
+                        r, g, b, a = img.getpixel((x, y))
+                        if a == 0:
+                            self.pixel_data[y][x] = None
+                        else:
+                            self.pixel_data[y][x] = '#%02x%02x%02x' % (r, g, b)
+                self.draw_grid()
+            except Exception as e:
+                messagebox.showerror("Error", f"Failed to open image: {e}")
+    
+    def save_image(self):
+        out_img = Image.new("RGBA", (self.grid_width, self.grid_height), (255, 255, 255, 0))
+        for y in range(self.grid_height):
+            for x in range(self.grid_width):
+                color = self.pixel_data[y][x]
+                if color is not None:
+                    r = int(color[1:3], 16)
+                    g = int(color[3:5], 16)
+                    b = int(color[5:7], 16)
+                    out_img.putpixel((x, y), (r, g, b, 255))
+        file_path = filedialog.asksaveasfilename(
+            defaultextension=".png",
+            filetypes=[
+                ("PNG", "*.png"),
+                ("JPEG", "*.jpg;*.jpeg"),
+                ("BMP", "*.bmp"),
+                ("TGA", "*.tga"),
+                ("TIFF", "*.tiff"),
+                ("WEBP", "*.webp")
+            ]
+        )
+        if file_path:
+            ext = os.path.splitext(file_path)[1].lower()
+            if ext in [".jpg", ".jpeg"]:
+                file_format = "JPEG"
+            elif ext == ".bmp":
+                file_format = "BMP"
+            elif ext == ".tga":
+                file_format = "TGA"
+            elif ext == ".tiff":
+                file_format = "TIFF"
+            elif ext == ".webp":
+                file_format = "WEBP"
+            else:
+                file_format = "PNG"
+            try:
+                out_img = out_img.resize((self.grid_width * self.cell_size, self.grid_height * self.cell_size), RESAMPLE_FILTER)
+                out_img.save(file_path, file_format)
+                messagebox.showinfo("Success", f"Image saved to {file_path}")
+            except Exception as e:
+                messagebox.showerror("Error", f"Failed to save image: {e}")
+
 if __name__ == "__main__":
     root = tk.Tk()
-    root.geometry("1200x800")  # Double the default window size.
-    root.wm_attributes('-toolwindow', 'True')  # Set as a tool window
+    root.geometry("1200x800")
+    root.wm_attributes('-toolwindow', 'True')
     app = SpriteSheetMaker(root)
     root.mainloop()
