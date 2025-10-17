@@ -1,5 +1,6 @@
 import tkinter as tk
 from tkinter import filedialog, messagebox, Menu, colorchooser
+import platform
 from PIL import Image, ImageTk
 import os
 import json
@@ -822,6 +823,14 @@ class PixelArtEditor:
 if __name__ == "__main__":
     root = tk.Tk()
     root.geometry("1200x800")
-    root.wm_attributes('-toolwindow', 'True')
+
+    try:
+        if platform.system() == "Windows":
+            root.wm_attributes('-toolwindow', True)
+        elif platform.system() == "Darwin":
+            root.wm_attributes('-type', 'utility')
+    except tk.TclError:
+        pass
+
     app = SpriteSheetMaker(root)
     root.mainloop()
